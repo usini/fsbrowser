@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://unpkg.com/@picocss/pico@latest/css/pico.min.css">
+    <script type="module" src="https://unpkg.com/esp-web-tools@8/dist/web/install-button.js?module"></script>
+    <title>FSBrowser Example</title>
+
+</head>
+
+<body>
+    <main class="container">
+        <h1>FSBrowser Example 🔌⚡</h1>
+        <p>FSBrowser from arduino ESP32 examples</p>
+        <esp-web-install-button manifest="bins/manifest.json">
+            <button slot="activate">Install</button>
+            <span slot="unsupported">Ah snap, your browser doesn't work!</span>
+            <span slot="not-allowed">Ah snap, you are not allowed to use this on HTTP!</span>
+        </esp-web-install-button>
+        <a href="https://github.com/usini/fsbrowser">Get it on Github - https://github.com/usini/fsbrowser</a>
+    </main>
+    <div class="container">
+        <center>
+            SSID: <span id="ssid_status">Unknown</span>
+            <br>
+            IP: <a id="ip_status" href="">Unknown</a>
+            <br>
+            URL: <a id="name" href="">Unknown</a><br>
+            Status: <span id="server_status">Unknown</span>
+            <br>
+            <br>
+        </center>
+        <label for="ssid">SSID
+            <input id="ssid" type="text">
+        </label>
+        <label for="password">Password
+            <input id="password" type="text">
+        </label>
+        <button onclick="serial.begin()">Connect</button>
+        <button onclick="setup()">Setup</button>
+        <button onclick="reset()">Reset</button>
+    </div>
+
+    <div class="container">
+        <textarea rows="10" id="rx"></textarea>
+        <input id="tx" type="text">
+    </div>
+
+
+</body>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/gh/usini/esprerial/dist/esprerial.min.js"></script>
+<script>
+
+    function setup() {
+        serial.write("ssid: " + document.getElementById("ssid").value);
+        serial.write("password: " + document.getElementById("password").value);
+    }
+
+    function reset() {
+        serial.write("reset");
+    }
+
+    function serialStart(){
+        reset();
+    }
+
+    function serialRead(message) {
+        document.getElementById("rx").value += message + "\r\n";
+        document.getElementById("rx").scrollTop = document.getElementById("rx").scrollHeight
+        console.log(message);
+
+        if (message.includes("SPI_FAST_FLASH_BOOT")){
+            document.getElementById("server_status").innerHTML = "Starting...";
+        }
+
+        if (message.includes("Connecting to")) {
+            ssid = message.split("Connecting to")[1].split("\n")[0].trim();
+            document.getElementById("ssid_status").innerHTML = ssid;
+        }
+
+        if (message.includes("IP address: ")){
+            ip = message.split("IP address:")[1].trim();
+            document.getElementById("ip_status").innerHTML = ip
+            document.getElementById("ip_status").href = "http://" + ip
+        }
+
+        if (message.includes("http://")){
+            name = message.split(" ")[1].trim();
+            document.getElementById("name").innerHTML = name
+            document.getElementById("name").href = name
+            document.getElementById("server_status").innerHTML = "Running";
+        }
+    }
+
+    document.getElementById("tx").addEventListener("keypress", function (event) {
+        if (event.key == "Enter") {
+            event.preventDefault();
+            serial.write(document.getElementById("tx").value);
+            document.getElementById("tx").value = "";
+        }
+    });
+
+    serial = new Esprerial();
+    serial.setStart(serialStart);
+    serial.setRead(serialRead);
+</script>
+
+</html>
